@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tombola Topic Wheel — Teams‑Ready (Preview of Final)</title>
+  <style>
+    :root {
+      --tombola-teal: #009688;
+      --tombola-dark: #0b3b3b;
+      --tombola-yellow: #ffd700;
+      --tombola-pink: #ef4fa6;
+      --tombola-purple: #6a5acd;
+      --tombola-lime: #9acd32;
+      --tombola-sky: #00bcd4;
+      --bg1: #041f21;
+      --bg2: #08353a;
+      --text: #ffffff;
+      --muted: #cde7e4;
+      --overlay: rgba(0,0,0,.6);
+      --ok: #65d6a6;
+      --warn: #f59e0b;
+      --err: #ef4444;
+    }
+
+    html, body { height: 100%; margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color: var(--text); background: radial-gradient(1200px 800px at 70% 20%, var(--bg2), var(--bg1)); }
+    .wrap { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr auto; gap: 12px; padding: clamp(12px, 2vw, 24px) clamp(10px, 2vw, 20px) 28px; max-width: 980px; margin: 0 auto; box-sizing: border-box; }
+
+    header { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .logo { width: 44px; height: 44px; border-radius: 12px; background: conic-gradient(from 0deg, var(--tombola-teal), var(--tombola-sky), var(--tombola-lime), var(--tombola-yellow), var(--tombola-pink), var(--tombola-purple), var(--tombola-teal)); box-shadow: 0 0 0 3px rgba(255,255,255,0.08), 0 10px 30px rgba(0,0,0,0.35); flex: 0 0 auto; }
+    h1 { font-size: clamp(20px, 3.2vw, 34px); margin: 0; letter-spacing: 0.2px; }
+    .subtitle { color: var(--muted); font-size: 14px; }
+
+    .notice { background: rgba(255,255,255,0.08); border-left: 4px solid var(--tombola-yellow); padding: 10px 12px; border-radius: 8px; font-size: 13px; color: var(--muted); }
+
+    .board { display: grid; grid-template-columns: 1fr; justify-items: center; align-items: start; gap: 18px; }
+    .wheel-holder { position: relative; width: min(560px, 96vw); aspect-ratio: 1 / 1; border-radius: 999px; display: grid; place-items: center; padding: 14px; background: linear-gradient(145deg, rgba(255,255,255,0.10), rgba(255,255,255,0.04)); box-shadow: inset 0 0 0 2px rgba(255,255,255,0.08), 0 20px 60px rgba(0,0,0,0.45); box-sizing: border-box; }
+    canvas { width: 100%; height: 100%; border-radius: 999px; transition: transform 9.8s cubic-bezier(.16,.9,.1,1); }
+    .pointer { position: absolute; top: -6px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 16px solid transparent; border-right: 16px solid transparent; border-bottom: 26px solid var(--tombola-yellow); filter: drop-shadow(0 6px 6px rgba(0,0,0,.35)); }
+    .hub { position: absolute; width: 96px; height: 96px; border-radius: 999px; background: var(--tombola-teal); box-shadow: inset 0 0 0 4px #0f5b57, 0 10px 30px rgba(0,0,0,.45); display: grid; place-items: center; color: #fff; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; font-size: 13px; text-align: center; }
+
+    .controls { display: grid; gap: 10px; justify-items: center; }
+    .meta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .badge { background: rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 999px; font-size: 13px; color: var(--muted); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); }
+    .btn { appearance: none; border: none; cursor: pointer; border-radius: 999px; padding: 14px 28px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; font-size: 14px; color: #042c2b; background: linear-gradient(180deg, #ffe566, var(--tombola-yellow)); box-shadow: 0 10px 20px rgba(0,0,0,.35), inset 0 -2px 0 rgba(0,0,0,.12); transition: transform .08s ease, filter .2s ease, opacity .2s ease; }
+    .btn:hover { filter: brightness(1.05); }
+    .btn:active { transform: translateY(1px); }
+    .btn[disabled] { opacity: .55; cursor: not-allowed; }
+    .link { color: var(--tombola-yellow); cursor: pointer; text-decoration: underline; }
+
+    .result { margin-top: 6px; width: 100%; max-width: 780px; background: rgba(255,255,255,0.06); padding: 16px 18px; border-radius: 16px; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08); display: none; box-sizing: border-box; }
+    .topic { font-size: clamp(18px, 2.4vw, 24px); line-height: 1.35; word-wrap: break-word; }
+    .tools { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+    .mini { font-size: 12px; color: var(--muted); }
+    .warn { color: var(--warn); }
+    .ok { color: var(--ok); }
+
+    .used-form { display: none; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+    .input { padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.18); background: rgba(255,255,255,0.06); color: #fff; }
+
+    footer { text-align: center; color: var(--muted); font-size: 12px; }
+    .tag { color: var(--tombola-yellow); font-weight: 700; }
+
+    /* Modal editor for topics */
+    .modal { position: fixed; inset: 0; display: none; place-items: center; background: var(--overlay); z-index: 50; padding: 16px; }
+    .modal.open { display: grid; }
+    .card { width: min(900px, 96vw); max-height: 90vh; overflow: auto; background: #0f2d31; color: var(--text); border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.55); padding: 18px; box-sizing: border-box; }
+    .card h2 { margin: 0 0 8px; font-size: 18px; }
+    textarea { width: 100%; height: 260px; border-radius: 12px; background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.12); padding: 12px; box-sizing: border-box; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+    .help { color: var(--muted); font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>Tombola Daily Topic Wheel</h1>
+          <div class="subtitle">Teams‑ready • One spin per 8 hours • No repeats • Editable topics</div>
+        </div>
+      </div>
+      <button id="manageBtn" class="btn" title="Edit topics">Manage Topics</button>
+    </header>
+
+    <div class="notice">This is the <strong>preview of the finished build</strong>. Form submissions are wired for preview mode; when you give me your Microsoft Forms URLs I’ll plug them into the config (no code changes by your team).</div>
+
+    <main class="board">
+      <div class="wheel-holder">
+        <div class="pointer" aria-hidden="true"></div>
+        <canvas id="wheel" width="1000" height="1000" aria-label="Topic wheel"></canvas>
+        <div class="hub">Spin</div>
+      </div>
+      <div class="controls">
+        <div class="meta">
+          <div id="remainingBadge" class="badge">Remaining topics: …</div>
+          <div class="badge">Theme: <span class="tag">tombola</span></div>
+        </div>
+        <button id="spinBtn" class="btn">Spin the Wheel</button>
+        <div id="result" class="result">
+          <div class="mini">Selected topic</div>
+          <div id="topicText" class="topic"></div>
+          <div class="tools">
+            <button id="copyBtn" class="btn" style="padding:10px 16px; font-size:12px;">Copy Topic</button>
+            <span id="copiedMsg" class="mini" aria-live="polite"></span>
+            <span class="mini">·</span>
+            <span id="resetLink" class="mini link">Reset topics</span>
+          </div>
+          <div class="tools">
+            <button id="markUsedBtn" class="btn" style="padding:10px 16px; font-size:12px;">Mark as Used</button>
+            <span id="lockMsg" class="mini warn"></span>
+          </div>
+          <div id="usedForm" class="used-form">
+            <input id="nameInput" class="input" placeholder="Your name (auto if in Teams)" />
+            <input id="roomInput" class="input" placeholder="Room name" />
+            <input id="timeInput" class="input" type="datetime-local" />
+            <button id="submitUsed" class="btn" style="padding:10px 16px; font-size:12px;">Submit Usage</button>
+            <span id="usedMsg" class="mini ok" aria-live="polite"></span>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <div>Works inside Microsoft Teams tabs (Website tab with SharePoint URL). State is stored per user in their browser. Monthly reset and SharePoint topic loader can be enabled in config.</div>
+    </footer>
+  </div>
+
+  <!-- Modal: Manage Topics -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="card">
+      <h2 id="modalTitle">Manage Topics</h2>
+      <p class="help">Paste one topic per line. <strong>Save & Reset Pool</strong> applies to you immediately. With a SharePoint topics file configured, everyone will get your updates next load.</p>
+      <textarea id="topicsInput" spellcheck="false"></textarea>
+      <div class="row" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;">
+        <button id="saveTopics" class="btn">Save & Reset Pool</button>
+        <button id="restoreDefaults" class="btn" style="background: linear-gradient(180deg, #cbd5e1, #94a3b8);">Restore Defaults</button>
+        <button id="closeModal" class="btn" style="background: linear-gradient(180deg, #b4f8c8, #65d6a6);">Close</button>
+        <span class="help">Current count: <span id="countInfo">0</span></span>
+      </div>
+    </div>
+  </div>
+
+  <iframe name="formSink" style="display:none;"></iframe>
+
+  <script>
+    // ============ CONFIG (edit these later) ============
+    const LOCK_HOURS = 8; // one spin every 8 hours
+
+    // If you want a shared monthly topics file, put its SharePoint URL here (plain text, one topic per line). Leave '' to use the built‑in list.
+    const SHAREPOINT_TOPICS_URL = '';
+
+    // Microsoft Forms integration (set these when ready). If empty, submissions run in preview mode only.
+    const ASSIGN_POST_URL = ''; // e.g. https://forms.office.com/Pages/ResponsePage.aspx?id=... (we'll convert to the POST endpoint together)
+    const USAGE_POST_URL  = '';
+    // Map your field names (left) to what we send (right). We'll fill these once you share your Forms.
+    const ASSIGN_FIELDS = { name: '', email: '', topic: '', assignedAt: '', assignedAtLocal: '', userAgent: '' };
+    const USAGE_FIELDS  = { name: '', email: '', topic: '', assignedAt: '', usedAt: '', room: '' };
+
+    // Monthly auto‑reset (UK). If true, the no‑repeat pool & assignment reset when the month changes.
+    const MONTHLY_RESET_ENABLED = true;
+
+    // ============ Storage keys ============
+    const TOPICS_KEY = 'tombola_topics_v1';
+    const POOL_KEY = 'tombola_topic_pool_v1';
+    const ASSIGN_KEY = 'tombola_assignment_v1';
+    const MONTH_KEY = 'tombola_month_v1';
+
+    // ============ Helpers ============
+    function inTeams(){ return !!(window.microsoftTeams); }
+    function nowISO(){ return new Date().toISOString(); }
+    function londonNowISO(){ return new Date(new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' })).toISOString(); }
+    function getLondonMonthKey(){ const d = new Date(new Date().toLocaleString('en-GB', { timeZone: 'Europe/London' })); return `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}`; }
+    function hoursBetween(iso){ const then = new Date(iso).getTime(); return (Date.now() - then) / 3.6e6; }
+
+    // Submit to Forms (or any endpoint) via hidden iframe (avoids CORS issues)
+    function postTo(url, fields){
+      if (!url) return Promise.resolve('preview');
+      return new Promise(resolve => {
+        const form = document.createElement('form');
+        form.method = 'POST'; form.action = url; form.target = 'formSink';
+        Object.entries(fields).forEach(([k,v])=>{ const input = document.createElement('input'); input.type='hidden'; input.name=k; input.value=v==null?'':String(v); form.appendChild(input); });
+        document.body.appendChild(form); form.submit(); setTimeout(()=>{ form.remove(); resolve('ok'); }, 400); // naive success
+      });
+    }
+
+    // ============ Topics (with optional SharePoint loader) ============
+    const DEFAULT_TOPICS = [
+      "What was your favourite childhood TV show?",
+      "Tea or coffee — and why is yours the right choice?",
+      "What’s your go-to feel-good song?",
+      "If you won £1,000 today, what would you buy first?",
+      "What’s a snack combo you love that others might find odd?",
+      "What’s the best day trip you’ve taken in the UK?",
+      "What’s a little life hack you swear by at work?",
+      "Which emoji do you overuse?",
+      "What’s your most-used app on your phone?",
+      "What’s your favourite fish and chip shop order?",
+      "Are you an early bird or a night owl?",
+      "What’s one hobby you’d love to pick up this year?",
+      "What’s your favourite biscuit to dunk?",
+      "What’s a small thing that made you smile this week?",
+      "What’s your most nostalgic sweet from childhood?",
+      "What’s your ideal Sunday?",
+      "If you could instantly master a skill, which one?",
+      "What’s your favourite season and why?",
+      "Which UK city would you move to for a year?",
+      "What’s your comfort TV show or film?",
+      "What’s a quote or motto you like?",
+      "What’s your favourite sandwich filling?",
+      "If you could have dinner with any fictional character, who and why?",
+      "What’s your favourite board or party game?",
+      "What’s a small daily habit that helps you stay calm?",
+      "What’s your favourite way to unwind after a shift?",
+      "Which decade had the best music?",
+      "What’s a local hidden gem you recommend (cafe, park, walk)?",
+      "What’s your favourite takeaway cuisine?",
+      "What’s the last photo you took (describe it)?",
+      "What’s your favourite thing about autumn?",
+      "What’s a superstition you secretly follow?",
+      "What’s your favourite ice cream flavour?",
+      "If you could visit any festival or event, which one?",
+      "What’s a smell that instantly brings back memories?",
+      "What’s your favourite type of holiday: city, beach, countryside?",
+      "What’s your go-to karaoke song?",
+      "What small purchase under £20 brought you big joy?",
+      "What’s a recipe you can make from memory?",
+      "If you had a time machine for one day, where/when would you go?",
+      "What’s your favourite crisp flavour?",
+      "What’s a film you think everyone should watch once?",
+      "What’s something new you learned this month?",
+      "What’s your favourite way to get your steps in?",
+      "What’s a tiny annoyance you find weirdly funny?",
+      "What’s your dream UK weekend away?",
+      "What’s your favourite hot drink order?",
+      "What’s a song that makes you think of summer?",
+      "What’s your most loved kitchen gadget?",
+      "What’s a goal you’re working on right now?"
+    ];
+
+    async function fetchSharePointTopics(){
+      if (!SHAREPOINT_TOPICS_URL) return null;
+      try {
+        const res = await fetch(SHAREPOINT_TOPICS_URL, { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP '+res.status);
+        const text = await res.text();
+        const lines = text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+        const uniq = [...new Set(lines)];
+        if (uniq.length >= 2) return uniq.slice(0, 500);
+        return null;
+      } catch { return null; }
+    }
+
+    function getTopicsLocal(){
+      try { const raw = localStorage.getItem(TOPICS_KEY); if (!raw) return DEFAULT_TOPICS.slice(); const arr = JSON.parse(raw); return (Array.isArray(arr) && arr.length) ? arr : DEFAULT_TOPICS.slice(); } catch { return DEFAULT_TOPICS.slice(); }
+    }
+    function setTopicsLocal(arr){ localStorage.setItem(TOPICS_KEY, JSON.stringify(arr)); }
+
+    function sanitiseList(text){ const lines = text.split(/\r?\n/).map(s=>s.trim()).filter(Boolean); const seen=new Set(); const out=[]; for(const l of lines){ if(!seen.has(l)){ seen.add(l); out.push(l);} } return out.slice(0,500); }
+
+    // ============ Pool / Assignment / Month reset ============
+    function loadPool(max){ try{ const raw=localStorage.getItem(POOL_KEY); if(!raw) return null; const arr=JSON.parse(raw); if(!Array.isArray(arr)) return null; return arr.filter(i=>Number.isInteger(i)&&i>=0&&i<max);}catch{return null;} }
+    function savePool(arr){ localStorage.setItem(POOL_KEY, JSON.stringify(arr)); }
+    function resetPool(len){ const arr = Array.from({length: len}, (_, i) => i); savePool(arr); return arr; }
+
+    function loadAssignment(){ try{ const raw=localStorage.getItem(ASSIGN_KEY); return raw?JSON.parse(raw):null; }catch{return null;} }
+    function saveAssignment(obj){ localStorage.setItem(ASSIGN_KEY, JSON.stringify(obj)); }
+    function clearAssignment(){ localStorage.removeItem(ASSIGN_KEY); }
+
+    function checkMonthlyReset(){ if (!MONTHLY_RESET_ENABLED) return; const current = getLondonMonthKey(); const prev = localStorage.getItem(MONTH_KEY); if (prev !== current){ localStorage.setItem(MONTH_KEY, current); // reset
+      clearAssignment(); const topics = getTopicsLocal(); resetPool(topics.length);
+    }}
+
+    // ============ UI refs ============
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const remainingBadge = document.getElementById('remainingBadge');
+    const spinBtn = document.getElementById('spinBtn');
+    const result = document.getElementById('result');
+    const topicText = document.getElementById('topicText');
+    const copiedMsg = document.getElementById('copiedMsg');
+    const resetLink = document.getElementById('resetLink');
+    const markUsedBtn = document.getElementById('markUsedBtn');
+    const usedForm = document.getElementById('usedForm');
+    const nameInput = document.getElementById('nameInput');
+    const roomInput = document.getElementById('roomInput');
+    const timeInput = document.getElementById('timeInput');
+    const submitUsed = document.getElementById('submitUsed');
+    const usedMsg = document.getElementById('usedMsg');
+    const lockMsg = document.getElementById('lockMsg');
+
+    // ============ Wheel drawing ============
+    let TOPIC_LIST = [];
+    function drawWheel(){ const N = TOPIC_LIST.length || 2; const radius = canvas.width/2; ctx.clearRect(0,0,canvas.width,canvas.height); ctx.save(); ctx.translate(radius, radius); const angle=(Math.PI*2)/N; const colours=['#00a89a','#ffd700','#6a5acd','#ef4fa6','#00bcd4','#9acd32','#0aa57a','#ffe066']; for(let i=0;i<N;i++){ ctx.beginPath(); ctx.moveTo(0,0); ctx.fillStyle=colours[i%colours.length]; ctx.arc(0,0,radius-4, i*angle, (i+1)*angle); ctx.closePath(); ctx.fill(); } ctx.beginPath(); ctx.lineWidth=12; ctx.strokeStyle='rgba(255,255,255,0.75)'; ctx.arc(0,0,radius-6,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
+    function angleForIndex(idx){ const N = TOPIC_LIST.length; const slice=(Math.PI*2)/N; const top=-Math.PI/2; const center=(idx+0.5)*slice; let t=top-center; t=((t%(Math.PI*2))+Math.PI*2)%(Math.PI*2); return t; }
+
+    function updateRemaining(pool){ remainingBadge.textContent = `Remaining topics: ${pool.length}/${TOPIC_LIST.length}`; }
+    function getOrInitPool(){ let p = loadPool(TOPIC_LIST.length); if(!p||!p.length) p = resetPool(TOPIC_LIST.length); updateRemaining(p); return p; }
+
+    let spinning=false; let wobbleTimer=null;
+    function chooseRandomIndex(pool){ const j=Math.floor(Math.random()*pool.length); const idx=pool[j]; pool.splice(j,1); savePool(pool); updateRemaining(pool); return idx; }
+    function spinToIndex(idx){ const base=angleForIndex(idx); const extra=7 + Math.floor(Math.random()*2); const final=base + extra*Math.PI*2; canvas.style.transform = `rotate(${final}rad)`; // little wobble after main spin
+      clearTimeout(wobbleTimer); wobbleTimer = setTimeout(()=>{ canvas.style.transition = 'transform .45s cubic-bezier(.25,1.4,.35,1)'; canvas.style.transform = `rotate(${final + (Math.PI/180)*2.6}rad)`; setTimeout(()=>{ canvas.style.transition = 'transform .35s cubic-bezier(.18,.9,.2,1)'; canvas.style.transform = `rotate(${final}rad)`; setTimeout(()=>{ canvas.style.transition = 'transform 9.8s cubic-bezier(.16,.9,.1,1)'; }, 400); }, 460); }, 9800);
+    }
+
+    function revealTopic(idx){ const t = TOPIC_LIST[idx]; topicText.textContent = t; result.style.display='block'; usedForm.style.display='none'; usedMsg.textContent=''; lockMsg.textContent=''; }
+    function setUsedDefaultTime(){ const d=new Date(); const pad=n=>String(n).padStart(2,'0'); const local=`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; timeInput.value=local; }
+
+    function lockIfAssigned(assign){ if(!assign) return; const hrs = hoursBetween(assign.assignedAt); if(hrs < LOCK_HOURS){ spinBtn.disabled=true; lockMsg.textContent = "You've already spun! Don't worry though, you can have a new topic tomorrow"; } }
+
+    async function init(){
+      checkMonthlyReset();
+      // Load topics (SharePoint file if provided, otherwise local/default)
+      const remote = await fetchSharePointTopics();
+      TOPIC_LIST = remote || getTopicsLocal();
+      drawWheel(); canvas.style.transform = `rotate(${angleForIndex(7)}rad)`;
+
+      // Pool & existing assignment
+      let pool = getOrInitPool();
+      const existing = loadAssignment();
+      if (existing && hoursBetween(existing.assignedAt) < LOCK_HOURS){ revealTopic(existing.index); lockIfAssigned(existing); }
+
+      // Try to get Teams user context if available later; fallback remains manual name input
+      if (inTeams()){
+        try { microsoftTeams.app.initialize().then(()=> microsoftTeams.app.getContext().then(ctx=>{ if(ctx?.user?.userPrincipalName){ nameInput.value = ctx.user.displayName || ctx.user.userPrincipalName; } })); } catch {}
+      }
+
+      // Spin action
+      spinBtn.addEventListener('click', async ()=>{
+        const current = loadAssignment();
+        if (current && hoursBetween(current.assignedAt) < LOCK_HOURS){ lockIfAssigned(current); return; }
+        if (spinning) return; pool = getOrInitPool(); const idx = chooseRandomIndex(pool);
+        spinning = true; spinBtn.setAttribute('disabled','true'); lockMsg.textContent='';
+        spinToIndex(idx);
+        setTimeout(async ()=>{
+          const assignedAt = nowISO(); const assignedAtLocal = londonNowISO();
+          saveAssignment({ index: idx, assignedAt });
+          revealTopic(idx);
+          lockIfAssigned({ index: idx, assignedAt });
+
+          // Send ASSIGN (preview mode if URL not set)
+          const name = nameInput.value || 'Unknown (preview)';
+          const email = '';
+          const fields = {}; Object.entries(ASSIGN_FIELDS).forEach(([k,f])=>{ if(!f) return; if(k==='name') fields[f]=name; else if(k==='email') fields[f]=email; else if(k==='topic') fields[f]=TOPIC_LIST[idx]; else if(k==='assignedAt') fields[f]=assignedAt; else if(k==='assignedAtLocal') fields[f]=assignedAtLocal; else if(k==='userAgent') fields[f]=navigator.userAgent; });
+          await postTo(ASSIGN_POST_URL, fields);
+
+          spinning = false; // keep disabled due to lock
+        }, 10200);
+      });
+
+      // Copy
+      document.getElementById('copyBtn').addEventListener('click', async ()=>{
+        try{ await navigator.clipboard.writeText(topicText.textContent.trim()); copiedMsg.textContent='Copied!'; }catch{ copiedMsg.textContent='Select and copy manually.'; } setTimeout(()=>copiedMsg.textContent='', 3000);
+      });
+
+      // Reset pool & clear assignment (local only)
+      resetLink.addEventListener('click', ()=>{ if (confirm('Reset the topic pool and clear your current assignment (local only)?')) { const arr = resetPool(TOPIC_LIST.length); updateRemaining(arr); result.style.display='none'; clearAssignment(); spinBtn.disabled=false; lockMsg.textContent=''; } });
+
+      // Manage Topics modal (local editor or for preparing SharePoint file)
+      const modal = document.getElementById('modal');
+      const topicsInput = document.getElementById('topicsInput');
+      const countInfo = document.getElementById('countInfo');
+      function openModal(){ const current = getTopicsLocal(); topicsInput.value = current.join('\n'); countInfo.textContent = current.length; modal.classList.add('open'); topicsInput.focus(); }
+      function closeModal(){ modal.classList.remove('open'); }
+      document.getElementById('manageBtn').addEventListener('click', openModal);
+      document.getElementById('closeModal').addEventListener('click', closeModal);
+      document.getElementById('restoreDefaults').addEventListener('click', ()=>{ topicsInput.value = DEFAULT_TOPICS.join('\n'); countInfo.textContent = DEFAULT_TOPICS.length; });
+      topicsInput.addEventListener('input', ()=>{ countInfo.textContent = sanitiseList(topicsInput.value).length; });
+      document.getElementById('saveTopics').addEventListener('click', ()=>{ const list = sanitiseList(topicsInput.value); if (list.length < 2){ alert('Please enter at least 2 topics.'); return; } setTopicsLocal(list); TOPIC_LIST = getTopicsLocal(); drawWheel(); resetPool(TOPIC_LIST.length); updateRemaining(loadPool(TOPIC_LIST.length)||[], TOPIC_LIST.length); result.style.display='none'; clearAssignment(); spinBtn.disabled=false; lockMsg.textContent=''; closeModal(); });
+
+      // Mark as Used
+      markUsedBtn.addEventListener('click', ()=>{ usedForm.style.display='flex'; if (!nameInput.value) { nameInput.focus(); } setUsedDefaultTime(); roomInput.placeholder = 'e.g. Bingo 90 #3'; });
+      submitUsed.addEventListener('click', async ()=>{
+        const assign = loadAssignment(); if (!assign){ usedMsg.style.color='var(--err)'; usedMsg.textContent='No assigned topic to mark.'; return; }
+        const room = roomInput.value.trim(); const usedAt = timeInput.value; const name = nameInput.value.trim() || 'Unknown (preview)';
+        if (!room || !usedAt){ usedMsg.style.color='var(--err)'; usedMsg.textContent='Please enter room and time.'; return; }
+        const topic = TOPIC_LIST[assign.index];
+        // Send USAGE (preview if URL not set)
+        const fields = {}; Object.entries(USAGE_FIELDS).forEach(([k,f])=>{ if(!f) return; if(k==='name') fields[f]=name; else if(k==='email') fields[f]=''; else if(k==='topic') fields[f]=topic; else if(k==='assignedAt') fields[f]=assign.assignedAt; else if(k==='usedAt') fields[f]=usedAt; else if(k==='room') fields[f]=room; });
+        await postTo(USAGE_POST_URL, fields);
+        usedMsg.style.color='var(--ok)'; usedMsg.textContent='Submitted. (Preview)';
+      });
+    }
+
+    // ===== Wheel boot =====
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
